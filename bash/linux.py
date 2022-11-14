@@ -73,6 +73,9 @@ El path se puede retocar.
 
 ?$ | more ----> para cuando un output es muy largo, poder escrolear con el enter
 
+?$ ln -f -s {archivoa} {archivob}  ---> hacer enlace simbolico forzado de un archivo a otro
+
+
 pipelines o tuberias son la ejecución de varios comandos en una linea
 Por ejemplo
 
@@ -903,7 +906,6 @@ Levantar el demonio de ssh
 *Manera 1:
 
 Una vez levantado el demonio en el sistema, podria conectarme desde otros equipos terceros a mi sistema proporcionando la password
-
 ?$ ssh {username}@{ip} 
 ?$ ssh k0v4ks@localhost 
 
