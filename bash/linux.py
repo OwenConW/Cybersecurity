@@ -75,6 +75,9 @@ El path se puede retocar.
 
 ?$ ln -f -s {archivoa} {archivob}  ---> hacer enlace simbolico forzado de un archivo a otro
 
+?$ ps --> process system
+
+?$ ps -faux --> listar todos los procesos del sistema con full-format (-f), nombre o euid de user (-u), excepto procesos no asociados a la terminal y de ambos session leaders
 
 pipelines o tuberias son la ejecución de varios comandos en una linea
 Por ejemplo

