@@ -1085,7 +1085,7 @@ Para ponerse en escucha en un puerto
 
 Tareas que se ejecutan en el sistema a intervalos regulares de tiempo
 
-/etc/cron.d$
+/etc/cron.d
 Dentro podremos ver las tareas 
 Las cuales tmb podremos ver 
 
