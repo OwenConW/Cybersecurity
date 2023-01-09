@@ -79,6 +79,8 @@ El path se puede retocar.
 
 ?$ ps -faux --> listar todos los procesos del sistema con full-format (-f), nombre o euid de user (-u), excepto procesos no asociados a la terminal y de ambos session leaders
 
+?$ du -hc {file_name} --> Listar el peso de un archivo
+
 pipelines o tuberias son la ejecución de varios comandos en una linea
 Por ejemplo
 

